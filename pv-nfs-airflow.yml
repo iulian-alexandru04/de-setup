@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nfs-airflow
+  labels:
+    type: nfs
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain   # or Delete if you want PV removed automatically
+  storageClassName: nfs
+  nfs:
+    path: /var/nfs/general    # <-- replace with your NFS export path
+    server: 68.183.218.220            # <-- replace with your NFS server IP or hostname
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-nfs-airflow
+  namespace: airflow              # <-- replace with your namespace
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs
+
+
