@@ -478,7 +478,10 @@ extraConfigMaps: {}
 # Extra env 'items' that will be added to the definition of airflow containers
 # a string is expected (templated).
 # TODO: difference from `env`? This is a templated string. Probably should template `env` and remove this.
-extraEnv: ~
+extraEnv: |
+  - name: "AIRFLOW_CONN_DO_SPACES"
+    value: "s3://DO80188UGWTQ6F6KHPZ7:xdlOdhmBVOrngJ2EnPKgn8cry94/fc1y+KThdf+wkKQ@/?host=https://fra1.digitaloceanspaces.com"
+
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES
@@ -690,13 +693,13 @@ workers:
     # ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
     automountServiceAccountToken: true
     # Specifies whether a ServiceAccount should be created
-    create: true
+    create: false
     # The name of the ServiceAccount to use.
     # If not set and create is true, a name is generated using the release name
-    name: ~
-
+    name: airflow
     # Annotations to add to worker kubernetes service account.
-    annotations: {}
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::518728348200:user/airflow
 
   # Allow KEDA autoscaling for Airflow Celery workers
   keda:
@@ -1390,10 +1393,11 @@ apiServer:
     create: true
     # The name of the ServiceAccount to use.
     # If not set and create is true, a name is generated using the release name
-    name: ~
+    name: airflow
 
     # Annotations to add to Airflow API server kubernetes service account.
-    annotations: {}
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::518728348200:user/airflow
   service:
     type: ClusterIP
     ## service annotations
@@ -1606,13 +1610,14 @@ webserver:
     # ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
     automountServiceAccountToken: true
     # Specifies whether a ServiceAccount should be created
-    create: true
+    create: false
     # The name of the ServiceAccount to use.
     # If not set and create is true, a name is generated using the release name
-    name: ~
+    name: airflow
 
     # Annotations to add to webserver kubernetes service account.
-    annotations: {}
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::518728348200:user/airflow
 
   # Webserver pod disruption budget
   podDisruptionBudget:
@@ -2840,12 +2845,14 @@ config:
     executor: '{{ .Values.executor }}'
     # For Airflow 1.10, backward compatibility; moved to [logging] in 2.0
     colored_console_log: 'False'
-    remote_logging: '{{- ternary "True" "False" (or .Values.elasticsearch.enabled .Values.opensearch.enabled) }}'
     auth_manager: "airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
+    test_connection: "Enabled"
   logging:
-    remote_logging: '{{- ternary "True" "False" (or .Values.elasticsearch.enabled .Values.opensearch.enabled) }}'
+    remote_log_conn_id: 'do_logs_conn_id'
     colored_console_log: 'False'
-    log_serving_enabled: "True"
+    logging_level: "DEBUG"
+    delete_worker_pods: 'False'
+    worker_log_server_port: '0'
   metrics:
     statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
     statsd_port: 9125
@@ -2858,6 +2865,8 @@ config:
     enable_proxy_fix: 'True'
     # For Airflow 1.10
     rbac: 'True'
+    log_fetch_timeout_sec: 0
+    worker_log_server_port: '0'
   celery:
     flower_url_prefix: '{{ ternary "" .Values.ingress.flower.path (eq .Values.ingress.flower.path "/") }}'
     worker_concurrency: 2
@@ -3083,5 +3092,5 @@ logs:
     # If using a custom storageClass, pass name here
     storageClassName:
     ## the name of an existing PVC to use
-    existingClaim:
+    existingClaim: pvc-nfs-airflow
 
