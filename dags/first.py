@@ -45,15 +45,15 @@ with dag:
     start = EmptyOperator(task_id="start")
 
     @task(task_id="resolve_location")
-    def resolve_location(params: dict) -> dict:
+    def resolve_location(my_params: dict) -> dict:
         """
         Return {'city','latitude','longitude','timezone'}.
         If lat/lon are not provided, geocode the city via Open-Meteo's free geocoding API.
         """
-        city = (params.get("city") or "").strip()
-        lat = params.get("latitude")
-        lon = params.get("longitude")
-        tz = params.get("timezone") or "UTC"
+        city = (my_params.get("city") or "").strip()
+        lat = my_params.get("latitude")
+        lon = my_params.get("longitude")
+        tz = my_params.get("timezone") or "UTC"
 
         if lat is not None and lon is not None:
             return {"city": city or f"{lat},{lon}", "latitude": float(lat), "longitude": float(lon), "timezone": tz}
@@ -126,12 +126,12 @@ with dag:
         }
 
     @task(task_id="store_json")
-    def store_json(envelope: dict, params: dict, ds: str) -> str:
+    def store_json(envelope: dict, my_params: dict, ds: str) -> str:
         """
         Write the JSON to <out_dir>/<city>/<ds>.json and return the path.
         """
         city_safe = (envelope["metadata"]["city"] or "unknown").replace("/", "_").replace(" ", "_")
-        out_dir = Path(params.get("out_dir") or DEFAULT_OUT_DIR) / city_safe
+        out_dir = Path(my_params.get("out_dir") or DEFAULT_OUT_DIR) / city_safe
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{ds}.json"
 
